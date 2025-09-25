@@ -8,10 +8,18 @@ export const GET_CART = gql`
           key
           quantity
           total
+
           product {
             node {
               id
               name
+              image {
+                id
+                uri
+                title
+                srcSet
+                sourceUrl
+              }
               # Pricing depends on concrete product type
               ... on ProductWithPricing {
                 price
