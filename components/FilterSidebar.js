@@ -27,7 +27,7 @@ export default function FilterSidebar({ filters, setFilters }) {
   };
 
   return (
-    <aside className="bg-white shadow-md rounded-xl p-4 w-full md:w-64">
+    <aside className="bg-white  p-4 w-full md:w-64">
       {/* Categories */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-3">Categories</h3>

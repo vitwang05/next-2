@@ -1,12 +1,13 @@
-
 import { useCart } from "../context/CartContext";
 import CartItem from "../components/CartItem";
+import Link from "next/link";
 
 export default function CartPage() {
   const { cart, loading } = useCart();
 
   if (loading) return <p>Loading cart...</p>;
-  if (!cart || cart.contents.nodes.length === 0) return <p>Giỏ hàng của bạn đang trống.</p>;
+  if (!cart || cart.contents.nodes.length === 0)
+    return <p>Giỏ hàng của bạn đang trống.</p>;
 
   return (
     <div className="max-w-6xl mx-auto px-2 py-8">
@@ -26,15 +27,22 @@ export default function CartPage() {
             <h2 className="text-xl font-bold mb-6">Tạm tính</h2>
             <div className="flex justify-between text-base mb-3">
               <span>Tổng sản phẩm:</span>
-              <span className="font-semibold">{cart.contents.nodes.length}</span>
+              <span className="font-semibold">
+                {cart.contents.nodes.length}
+              </span>
             </div>
             <div className="flex justify-between text-lg font-bold mb-6">
               <span>Tổng tiền:</span>
-              <span className="text-blue-600" dangerouslySetInnerHTML={{__html:cart.total}}/>
+              <span
+                className="text-blue-600"
+                dangerouslySetInnerHTML={{ __html: cart.total }}
+              />
             </div>
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg font-bold text-lg shadow transition">
-              Thanh toán
-            </button>
+            <Link href="/checkout">
+              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg font-bold text-lg shadow transition">
+                Thanh toán
+              </button>
+            </Link>
           </div>
         </div>
       </div>

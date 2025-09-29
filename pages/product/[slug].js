@@ -3,6 +3,9 @@ import { useQuery } from "@apollo/client/react";
 import { GET_PRODUCT } from "../../graphql/queries/product";
 import { useCart } from "../../context/CartContext";
 import { useMemo, useState } from "react";
+import { GET_PRODUCTS_WITH_FILTERS } from "../../graphql/queries/products";
+import Link from "next/link";
+import ProductCard from "../../components/ProductCard";
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -19,16 +22,36 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
 
   const product = data?.product;
+  const primaryCategorySlug = product?.productCategories?.nodes?.[0]?.slug || null;
+
+  // Related products: same category, exclude current product
+  const { data: relatedData } = useQuery(
+    GET_PRODUCTS_WITH_FILTERS,
+    {
+      variables: {
+        first: 8,
+        after: null,
+        search: null,
+        category: primaryCategorySlug,
+      },
+      skip: !primaryCategorySlug,
+    }
+  );
+  const relatedProducts = (relatedData?.products?.nodes || []).filter(p => p.slug !== product?.slug);
+
+  // Helpers to normalize Woo attribute naming (e.g., "pa_size" -> "size")
+  const normalizeAttrName = (name) => (name || "").toLowerCase().replace(/^pa_/, "");
+  const normalizeAttrValue = (value) => (value || "").toString().trim().toLowerCase();
 
   // ✅ Tìm variation dựa vào size + color được chọn
   const selectedVariation = useMemo(() => {
     return product?.variations?.nodes.find((v) => {
       const attrs = v.attributes?.nodes || [];
       const sizeMatch = selectedSize
-        ? attrs.some((a) => a.name.toLowerCase() === "size" && a.value === selectedSize)
+        ? attrs.some((a) => normalizeAttrName(a.name) === "size" && normalizeAttrValue(a.value) === normalizeAttrValue(selectedSize))
         : true;
       const colorMatch = selectedColor
-        ? attrs.some((a) => a.name.toLowerCase() === "color" && a.value === selectedColor)
+        ? attrs.some((a) => normalizeAttrName(a.name) === "color" && normalizeAttrValue(a.value) === normalizeAttrValue(selectedColor))
         : true;
       return sizeMatch && colorMatch;
     });
@@ -41,11 +64,9 @@ export default function ProductDetail() {
     return allSizes.filter((size) => {
       return product.variations.nodes.some((v) => {
         const attrs = v.attributes?.nodes || [];
-        const hasSize = attrs.some(
-          (a) => a.name.toLowerCase() === "size" && a.value === size
-        );
+        const hasSize = attrs.some((a) => normalizeAttrName(a.name) === "size" && normalizeAttrValue(a.value) === normalizeAttrValue(size));
         const colorOk = selectedColor
-          ? attrs.some((a) => a.name.toLowerCase() === "color" && a.value === selectedColor)
+          ? attrs.some((a) => normalizeAttrName(a.name) === "color" && normalizeAttrValue(a.value) === normalizeAttrValue(selectedColor))
           : true;
         return hasSize && colorOk && v.purchasable !== false;
       });
@@ -58,11 +79,9 @@ export default function ProductDetail() {
     return allColors.filter((color) => {
       return product.variations.nodes.some((v) => {
         const attrs = v.attributes?.nodes || [];
-        const hasColor = attrs.some(
-          (a) => a.name.toLowerCase() === "color" && a.value === color
-        );
+        const hasColor = attrs.some((a) => normalizeAttrName(a.name) === "color" && normalizeAttrValue(a.value) === normalizeAttrValue(color));
         const sizeOk = selectedSize
-          ? attrs.some((a) => a.name.toLowerCase() === "size" && a.value === selectedSize)
+          ? attrs.some((a) => normalizeAttrName(a.name) === "size" && normalizeAttrValue(a.value) === normalizeAttrValue(selectedSize))
           : true;
         return hasColor && sizeOk && v.purchasable !== false;
       });
@@ -182,10 +201,7 @@ export default function ProductDetail() {
             </div>
             {/* Nút mua hoặc liên hệ */}
             <div className="mt-6">
-              {(
-                (product.__typename === "SimpleProduct" && product.purchasable === false) ||
-                (product.__typename === "VariableProduct" && (!selectedVariation || selectedVariation.purchasable === false))
-              ) ? (
+              {product.__typename !== "VariableProduct" ? (
                 <a
                   href="/contact"
                   className="w-full px-6 py-3 bg-orange-500 text-white rounded block text-center text-lg font-semibold shadow hover:bg-orange-600 transition"
@@ -193,15 +209,40 @@ export default function ProductDetail() {
                   Liên hệ để được tư vấn
                 </a>
               ) : (
-                <button
-                  onClick={handleAddToCart}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded text-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50"
-                  disabled={product.__typename === "VariableProduct" && !selectedVariation}
-                >
-                  Add to Cart
-                </button>
+                (
+                  !selectedVariation || selectedVariation.purchasable === false
+                ) ? (
+                  <a
+                    href="/contact"
+                    className="w-full px-6 py-3 bg-orange-500 text-white rounded block text-center text-lg font-semibold shadow hover:bg-orange-600 transition"
+                  >
+                    Liên hệ để được tư vấn
+                  </a>
+                ) : (
+                  <button
+                    onClick={handleAddToCart}
+                    className="w-full px-6 py-3 bg-blue-600 text-white rounded text-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50"
+                    disabled={!selectedVariation}
+                  >
+                    Add to Cart
+                  </button>
+                )
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Related products */}
+      {relatedProducts.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-xl font-semibold mb-4">Sản phẩm liên quan</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {relatedProducts.map((rp) => (
+              <Link key={rp.id} href={`/product/${rp.slug}`}>
+                <ProductCard product={rp} />
+              </Link>
+            ))}
           </div>
         </div>
       )}
